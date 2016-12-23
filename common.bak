@@ -1,0 +1,11 @@
+#ifndef DRAGONFLY_COMMON_H_
+#define DRAGONFLY_COMMON_H_
+
+#include "config.h"
+
+#ifdef HAVE_GLOG_H
+#include <glog/logging.h>
+#endif
+
+
+#endif //DRAGONFLY_COMMON_H_

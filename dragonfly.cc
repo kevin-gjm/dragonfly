@@ -179,16 +179,14 @@ int main(int argc,char** argv)
     {
         return 1;
     }
-    LOG(INFO) << "hello";
-    LOG(INFO) << "hello";
-    LOG(INFO) << "hello";
-    LOG(INFO) << "hello";
-    while(1)
+    if(settings.maxcore != 0)
     {
-        sleep(1);
-    LOG(INFO) << "hello";
+        setup::set_coredump();
     }
-
+    if(pid_file != NULL)
+    {
+        setup::pid_write(pid_file);
+    }
     google::ShutdownGoogleLogging();
     return 0;
 }

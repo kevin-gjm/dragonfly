@@ -2,7 +2,22 @@
 #define DRAGONFLY_NET_EVENTLOOP_H_
 #include <time.h>
 #include <string>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <errno.h>
+#include <pthread.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <event.h>
+#include <event2/bufferevent.h>
+#include <event2/buffer.h>
+#include <event2/listener.h>
+#include <event2/util.h>
+#include <event2/event.h>
 #include "Connector.h"
 #include "Callbacks.h"
 
@@ -45,22 +60,22 @@ namespace dragonfly{
                 {
                     port_ = port;
                 }
-                void setPort(std::string& ip)
+                void setIp(std::string& ip)
                 {
                     ip_ = ip;
                 }
 
             private:
                 void setupThread(LibeventThread* thread);
-                void* threadProcess(void *arg);
-                void notifyHandler(int fd,short which,void* arg);
+                static void* threadProcess(void *arg);
+                static void notifyHandler(int fd,short which,void* arg);
 
 
-                void acceptCb(evconnlistener* listener,evutil_socket_t fd,sockaddr* sa,int socklen,void *user_data);
+                static void acceptCb(evconnlistener* listener,evutil_socket_t fd,sockaddr* sa,int socklen,void *user_data);
 
-                void bufferReadCb(struct bufferevent* bev,void* data);
-                void bufferWriteCb(struct bufferevent* bev,void* data);
-                void bufferEventCb(struct bufferevent* bev,short events,void* data);
+                static void bufferReadCb(struct bufferevent* bev,void* data);
+                static void bufferWriteCb(struct bufferevent* bev,void* data);
+                static void bufferEventCb(struct bufferevent* bev,short events,void* data);
 
                 DataCallback read_cb_;
                 DataCallback write_cb_;

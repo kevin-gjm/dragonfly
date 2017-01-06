@@ -1,28 +1,23 @@
 #ifndef DRAGONFLY_NET_CONNECTOR_H_
 #define DRAGONFLY_NET_CONNECTOR_H_
 
-#include <pthread>
+#include <pthread.h>
 #include <event.h>
-#include "uncopyable"
+#include <glog/logging.h>
+#include "uncopyable.h"
 namespace dragonfly
 {
     namespace net
     {
 
+        class EventLoop;
         class ConnQueue;
+        struct LibeventThread;
 
-        struct LibeventThread
+        class Conn: dragonfly::uncopyable
         {
-            pthread_t thread_id;
-            struct event_base *base;
-            struct event notify_event;
-            int notify_send_fd;
-            int notify_recv_fd;
-            ConnQueue connect_queue;
-        };
-
-        class Conn::dragonfly::uncopyable
-        {
+            friend class ConnQueue;
+            friend class EventLoop;
             public:
                 Conn(int fd=0)
                     :fd_(fd),
@@ -47,19 +42,20 @@ namespace dragonfly
                 }
                 int CopyReadBuffer(char *buffer, int len)
                 {
-                    return evbuffer_copyout(m_ReadBuf, buffer, len);
+                    return evbuffer_copyout(read_buf_, buffer, len);
                 }
                 int GetWriteBufferLen()
                 {
-                    return evbuffer_get_length(m_WriteBuf);
+                    return evbuffer_get_length(write_buf_);
                 }
                 int AddToWriteBuffer(char *buffer, int len)
                 {
-                    return evbuffer_add(m_WriteBuf, buffer, len);
+                    LOG(INFO)<<"add write buffer";
+                    return evbuffer_add(write_buf_, buffer, len);
                 }
-                void MoveBufferData()
+                void MoveBufferReadToWrite()
                 {
-                    evbuffer_add_buffer(m_WriteBuf, m_ReadBuf);
+                    evbuffer_add_buffer(write_buf_, read_buf_);
                 }
             private:
                 int fd_;
@@ -109,12 +105,24 @@ namespace dragonfly
                 {
                     conn->pre_->next_ = conn->next_;
                     conn->next_->pre_ = conn->pre_;
-                    delete c;
+                    delete conn;
                 }
             private:
                 Conn* head_;
                 Conn* tail_;
         };
+        struct LibeventThread
+        {
+            pthread_t thread_id;
+            struct event_base *base;
+            struct event notify_event;
+            int notify_send_fd;
+            int notify_recv_fd;
+            ConnQueue connect_queue;
+
+            EventLoop *tcp_connect;
+        };
+
     }
 }
 

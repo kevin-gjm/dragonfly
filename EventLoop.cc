@@ -2,9 +2,7 @@
 
 //TODO:
 //if user not use glog then use fprintf(stderr/stdout....)
-#ifdef HAVE_GLOG_H
 #include <glog/logging.h>
-#endif
 
 using namespace dragonfly::net;
 
@@ -16,8 +14,8 @@ EventLoop::EventLoop(int count)
     thread_count_(count),
     port_(0),
     ip_(),
-    main_base_(new LibeventThread);
-threads_(new LibeventThread[thread_count_])
+    main_base_(new LibeventThread),
+    threads_(new LibeventThread[thread_count_])
 {
     main_base_->thread_id = pthread_self();
     main_base_->base = event_base_new();
@@ -43,6 +41,7 @@ EventLoop::~EventLoop()
 }
 void EventLoop::setupThread(LibeventThread* thread)
 {
+    thread->tcp_connect = this;
     thread->base = event_base_new();
     if(NULL == thread->base)
         LOG(FATAL)<<"event base new error";
@@ -87,12 +86,15 @@ void EventLoop::notifyHandler(int fd,short which,void* arg)
     // insert new connect to the thread's connection queue
     Conn *conn = thread->connect_queue.InsertConn(confd,thread);
 
+    conn->read_buf_ = bufferevent_get_input(bev);
+    conn->write_buf_ = bufferevent_get_output(bev);
+
     bufferevent_setcb(bev,bufferReadCb,bufferWriteCb,bufferEventCb,conn);
     bufferevent_enable(bev,EV_READ);
     bufferevent_enable(bev,EV_WRITE);
 
-    if(connect_cb_)
-        connect_cb_(conn);
+    if(thread->tcp_connect->connect_cb_)
+        thread->tcp_connect->connect_cb_(conn);
 }
 
 void* EventLoop::threadProcess(void *arg)
@@ -100,15 +102,18 @@ void* EventLoop::threadProcess(void *arg)
     LibeventThread *thread = (LibeventThread*)arg;
     LOG(INFO)<<"thread "<<thread->thread_id <<" started!";
     event_base_dispatch(thread->base);
+    return NULL;
 }
 void EventLoop::bufferReadCb(struct bufferevent* bev,void* data)
 {
     Conn* conn = (Conn*)data;
-    conn->read_buf_ = bufferevent_get_input(bev);
+   /* conn->read_buf_ = bufferevent_get_input(bev);
     conn->write_buf_ = bufferevent_get_output(bev);
+    */
     LOG(INFO)<<"have data to read";
-    if(read_cb_)
-        read_cb_(conn);
+
+    if(conn->getThread()->tcp_connect->read_cb_)
+        conn->getThread()->tcp_connect->read_cb_(conn);
 }
 void EventLoop::bufferWriteCb(struct bufferevent* bev,void* data)
 {
@@ -116,16 +121,16 @@ void EventLoop::bufferWriteCb(struct bufferevent* bev,void* data)
     conn->read_buf_ = bufferevent_get_input(bev);
     conn->write_buf_ = bufferevent_get_output(bev);
     LOG(INFO)<<"have data to send";
-    if(write_cb_)
-        write_cb_(conn);
+    if(conn->getThread()->tcp_connect->write_cb_)
+        conn->getThread()->tcp_connect->write_cb_(conn);
 }
 void EventLoop::bufferEventCb(struct bufferevent* bev,short events,void* data)
 {
     LOG(ERROR) <<"some error happened."<<events;
     Conn *conn = (Conn*)data;
-    if(event_cb_)
-        event_cb_(conn,events);
-    conn->getThread()->connect_queue_.deleteConn(conn);
+    if(conn->getThread()->tcp_connect->event_cb_)
+        conn->getThread()->tcp_connect->event_cb_(conn,events);
+    conn->getThread()->connect_queue.DeleteConn(conn);
     bufferevent_free(bev);
 }
 void EventLoop::loop()
@@ -139,7 +144,7 @@ void EventLoop::loop()
     sin.sin_port = htons(port_);
     if(ip_ != std::string())
     {
-        if(inet_pton(AF_INET,ip,&sin->sin_addr) <= 0)
+        if(inet_pton(AF_INET,ip_.c_str(),&sin.sin_addr) <= 0)
             LOG(FATAL) << "socket ip error";
     }
 
@@ -170,6 +175,6 @@ void EventLoop::quit(timeval *tv)
 void EventLoop::acceptCb(evconnlistener* listener,evutil_socket_t fd,sockaddr* sa,int socklen,void *user_data)
 {
     EventLoop *server = (EventLoop*) user_data;
-    int num = rand() % thread_count_;
-    write(threads_[num].notify_send_fd,&fd,sizeof(evutil_socket_t));
+    int num = rand() % server->thread_count_ ;
+    write(server->threads_[num].notify_send_fd,&fd,sizeof(evutil_socket_t));
 }

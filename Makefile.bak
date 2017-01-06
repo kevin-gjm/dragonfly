@@ -2,15 +2,15 @@
 
 CC = g++
 
-SRCS = test.cc \
-	  EventLoop.cc \
+SRCS = dragonfly.cc \
+	   setup.cc \
 
 
 OBJS = $(SRCS:.cc=.o)
 
-EXEC = loop
+EXEC = dragonfly
 
-CFLAGS = -g -Wall -O2 -std=c++11 
+CFLAGS = -g -Wall -O2 
 
 LIBS = -levent -lpthread -lglog
 

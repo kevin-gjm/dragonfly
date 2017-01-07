@@ -29,7 +29,7 @@ namespace dragonfly{
 
                 static const int EXIT_CODE = -1;
 
-				TcpServer(int count, std::string& ip = std::string(), int port = 0);
+				TcpServer(int count, std::string& ip,int port = 0);
                 ~TcpServer();
 
                 void startRun();

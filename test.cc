@@ -8,9 +8,9 @@ class EchoServer
     public:
         EchoServer(int count,std::string& ip,int port)
 			:server_(new TcpServer(count, ip, port))
-        {	
+        {
 			server_->setReadCallback(std::bind(&EchoServer::onMessage, this, std::placeholders::_1));
-			server_->setConnectionCallback(std::bind(&EchoServer::onConnection, this, std::placeholders::_1)); 
+			server_->setConnectionCallback(std::bind(&EchoServer::onConnection, this, std::placeholders::_1));
         }
         ~EchoServer()
         {
@@ -38,7 +38,8 @@ class EchoServer
 
 int main()
 {
-    EchoServer server(4,"127.0.0.1",8888);
+    std::string ip = "127.0.0.1";
+    EchoServer server(4,ip,8888);
     server.start();
     return 1;
 }

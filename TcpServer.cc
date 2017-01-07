@@ -84,7 +84,7 @@ void TcpServer::notifyHandler(int fd,short which,void* arg)
     }
 
     // insert new connect to the thread's connection queue
-    Conn *conn = thread->connect_queue.InsertConn(confd,thread);
+    Conn *conn = thread->connect_queue.insertConn(confd,thread);
 
     conn->read_buf_ = bufferevent_get_input(bev);
     conn->write_buf_ = bufferevent_get_output(bev);

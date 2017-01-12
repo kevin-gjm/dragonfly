@@ -1,5 +1,5 @@
-#ifndef DRAGONFLY_NET_EVENTLOOP_H_
-#define DRAGONFLY_NET_EVENTLOOP_H_
+#ifndef DRAGONFLY_NET_TCPSERVER_H_
+#define DRAGONFLY_NET_TCPSERVER_H_
 #include <time.h>
 #include <string>
 #include <stdlib.h>
@@ -23,16 +23,16 @@
 
 namespace dragonfly{
     namespace net{
-        class EventLoop:dragonfly::uncopyable
+        class TcpServer:dragonfly::uncopyable
         {
             public:
 
                 static const int EXIT_CODE = -1;
 
-                EventLoop(int count);
-                ~EventLoop();
+				TcpServer(int count, std::string& ip = std::string(), int port = 0);
+                ~TcpServer();
 
-                void loop();
+                void startRun();
 
                 void quit(timeval *tv);
 
@@ -55,14 +55,6 @@ namespace dragonfly{
                 void setEventCallback(const EventCallback& cb)
                 {
                     event_cb_ = cb;
-                }
-                void setPort(int port)
-                {
-                    port_ = port;
-                }
-                void setIp(std::string& ip)
-                {
-                    ip_ = ip;
                 }
 
             private:
@@ -93,4 +85,4 @@ namespace dragonfly{
     }
 }
 
-#endif //DRAGONFLY_NET_EVENTLOOP_H_
+#endif //DRAGONFLY_NET_TCPSERVER_H_

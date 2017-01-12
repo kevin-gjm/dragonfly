@@ -1,4 +1,4 @@
-#include "EventLoop.h"
+#include "TcpServer.h"
 
 //TODO:
 //if user not use glog then use fprintf(stderr/stdout....)
@@ -6,14 +6,14 @@
 
 using namespace dragonfly::net;
 
-EventLoop::EventLoop(int count)
+TcpServer::TcpServer(int count,std::string& ip,int port)
     :read_cb_(NULL),
     write_cb_(NULL),
     connect_cb_(NULL),
     event_cb_(NULL),
     thread_count_(count),
-    port_(0),
-    ip_(),
+    port_(port),
+    ip_(ip),
     main_base_(new LibeventThread),
     threads_(new LibeventThread[thread_count_])
 {
@@ -24,10 +24,10 @@ EventLoop::EventLoop(int count)
     {
         setupThread(&threads_[i]);
     }
-    LOG(INFO) << "EventLoop ctor";
+    LOG(INFO) << "TcpServer ctor";
 }
 
-EventLoop::~EventLoop()
+TcpServer::~TcpServer()
 {
     quit(NULL);
     event_base_free(main_base_->base);
@@ -37,9 +37,9 @@ EventLoop::~EventLoop()
     }
     delete main_base_;
     delete[] threads_;
-    LOG(INFO)<< "EventLoop dtor";
+    LOG(INFO)<< "TcpServer dtor";
 }
-void EventLoop::setupThread(LibeventThread* thread)
+void TcpServer::setupThread(LibeventThread* thread)
 {
     thread->tcp_connect = this;
     thread->base = event_base_new();
@@ -57,7 +57,7 @@ void EventLoop::setupThread(LibeventThread* thread)
         LOG(FATAL)<<"Can not monitor notify pipe";
 }
 
-void EventLoop::notifyHandler(int fd,short which,void* arg)
+void TcpServer::notifyHandler(int fd,short which,void* arg)
 {
     LibeventThread * thread = (LibeventThread*)arg;
 
@@ -97,14 +97,14 @@ void EventLoop::notifyHandler(int fd,short which,void* arg)
         thread->tcp_connect->connect_cb_(conn);
 }
 
-void* EventLoop::threadProcess(void *arg)
+void* TcpServer::threadProcess(void *arg)
 {
     LibeventThread *thread = (LibeventThread*)arg;
     LOG(INFO)<<"thread "<<thread->thread_id <<" started!";
     event_base_dispatch(thread->base);
     return NULL;
 }
-void EventLoop::bufferReadCb(struct bufferevent* bev,void* data)
+void TcpServer::bufferReadCb(struct bufferevent* bev,void* data)
 {
     Conn* conn = (Conn*)data;
    /* conn->read_buf_ = bufferevent_get_input(bev);
@@ -115,7 +115,7 @@ void EventLoop::bufferReadCb(struct bufferevent* bev,void* data)
     if(conn->getThread()->tcp_connect->read_cb_)
         conn->getThread()->tcp_connect->read_cb_(conn);
 }
-void EventLoop::bufferWriteCb(struct bufferevent* bev,void* data)
+void TcpServer::bufferWriteCb(struct bufferevent* bev,void* data)
 {
     Conn* conn = (Conn*)data;
     conn->read_buf_ = bufferevent_get_input(bev);
@@ -124,16 +124,16 @@ void EventLoop::bufferWriteCb(struct bufferevent* bev,void* data)
     if(conn->getThread()->tcp_connect->write_cb_)
         conn->getThread()->tcp_connect->write_cb_(conn);
 }
-void EventLoop::bufferEventCb(struct bufferevent* bev,short events,void* data)
+void TcpServer::bufferEventCb(struct bufferevent* bev,short events,void* data)
 {
     LOG(ERROR) <<"some error happened."<<events;
     Conn *conn = (Conn*)data;
     if(conn->getThread()->tcp_connect->event_cb_)
         conn->getThread()->tcp_connect->event_cb_(conn,events);
-    conn->getThread()->connect_queue.DeleteConn(conn);
+    conn->getThread()->connect_queue.deleteConn(conn);
     bufferevent_free(bev);
 }
-void EventLoop::loop()
+void TcpServer::startRun()
 {
     evconnlistener *listener;
 
@@ -162,7 +162,7 @@ void EventLoop::loop()
     evconnlistener_free(listener);
 }
 
-void EventLoop::quit(timeval *tv)
+void TcpServer::quit(timeval *tv)
 {
     int contant = EXIT_CODE;
     for(int i=0;i<thread_count_;i++)
@@ -172,9 +172,9 @@ void EventLoop::quit(timeval *tv)
 
     event_base_loopexit(main_base_->base,tv);
 }
-void EventLoop::acceptCb(evconnlistener* listener,evutil_socket_t fd,sockaddr* sa,int socklen,void *user_data)
+void TcpServer::acceptCb(evconnlistener* listener,evutil_socket_t fd,sockaddr* sa,int socklen,void *user_data)
 {
-    EventLoop *server = (EventLoop*) user_data;
+    TcpServer *server = (TcpServer*) user_data;
     int num = rand() % server->thread_count_ ;
     write(server->threads_[num].notify_send_fd,&fd,sizeof(evutil_socket_t));
 }

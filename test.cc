@@ -1,21 +1,16 @@
 #include <functional>
 #include <glog/logging.h>
-#include "EventLoop.h"
-#include "Connector.h"
+#include "TcpServer.h"
 using namespace dragonfly::net;
-using namespace dragonfly;
 
 class EchoServer
 {
     public:
-        EchoServer()
-        {
-            std::string ip ="127.0.0.1";
-            server_ = new EventLoop(5);
-            server_->setPort(8888);
-            server_->setIp(ip);
-            server_->setReadCallback(std::bind(&EchoServer::onMessage,this,std::placeholders::_1));
-            server_->setConnectionCallback(std::bind(&EchoServer::onConnection,this,std::placeholders::_1));
+        EchoServer(int count,std::string& ip,int port)
+			:server_(new TcpServer(count, ip, port))
+        {	
+			server_->setReadCallback(std::bind(&EchoServer::onMessage, this, std::placeholders::_1));
+			server_->setConnectionCallback(std::bind(&EchoServer::onConnection, this, std::placeholders::_1)); 
         }
         ~EchoServer()
         {
@@ -23,28 +18,27 @@ class EchoServer
         }
         void start()
         {
-            server_->loop();
+            server_->startRun();
         }
     private:
         void onMessage(Conn* conn)
         {
-            conn->MoveBufferReadToWrite();
+            conn->moveBufferReadToWrite();
             LOG(INFO)<< "OnMessage";
         }
         void onConnection(Conn* conn)
         {
             LOG(INFO)<< "OnNewConnection";
             char buf[128]="new conn";
-            conn->AddToWriteBuffer(buf,strlen(buf));
+            conn->addToWriteBuffer(buf,strlen(buf));
             LOG(INFO)<< "OnNewConnection over";
         }
-        EventLoop* server_;
-
+		TcpServer* server_;
 };
 
 int main()
 {
-    EchoServer server;
+    EchoServer server(4,"127.0.0.1",8888);
     server.start();
     return 1;
 }

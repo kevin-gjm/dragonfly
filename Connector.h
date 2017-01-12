@@ -10,14 +10,14 @@ namespace dragonfly
     namespace net
     {
 
-        class EventLoop;
+        class TcpServer;
         class ConnQueue;
         struct LibeventThread;
 
         class Conn: dragonfly::uncopyable
         {
             friend class ConnQueue;
-            friend class EventLoop;
+            friend class TcpServer;
             public:
                 Conn(int fd=0)
                     :fd_(fd),
@@ -32,28 +32,28 @@ namespace dragonfly
 
                 int getFd(){return fd_;}
 
-                int GetReadBufferLen()
+                int getReadBufferLen()
                 {
                     return evbuffer_get_length(read_buf_);
                 }
-                int GetReadBuffer(char* buffer,int len)
+                int getReadBuffer(char* buffer,int len)
                 {
                     return evbuffer_remove(read_buf_,buffer,len);
                 }
-                int CopyReadBuffer(char *buffer, int len)
+                int copyReadBuffer(char *buffer, int len)
                 {
                     return evbuffer_copyout(read_buf_, buffer, len);
                 }
-                int GetWriteBufferLen()
+                int getWriteBufferLen()
                 {
                     return evbuffer_get_length(write_buf_);
                 }
-                int AddToWriteBuffer(char *buffer, int len)
+                int addToWriteBuffer(char *buffer, int len)
                 {
                     LOG(INFO)<<"add write buffer";
                     return evbuffer_add(write_buf_, buffer, len);
                 }
-                void MoveBufferReadToWrite()
+                void moveBufferReadToWrite()
                 {
                     evbuffer_add_buffer(write_buf_, read_buf_);
                 }
@@ -89,7 +89,7 @@ namespace dragonfly
                         tcur = tnext;
                     }
                 }
-                Conn* InsertConn(int fd,LibeventThread* t)
+                Conn* insertConn(int fd,LibeventThread* t)
                 {
                     Conn *c = new Conn(fd);
                     c->thread_ = t;
@@ -101,7 +101,7 @@ namespace dragonfly
                     next->pre_ = c;
                     return c;
                 }
-                void DeleteConn(Conn* conn)
+                void deleteConn(Conn* conn)
                 {
                     conn->pre_->next_ = conn->next_;
                     conn->next_->pre_ = conn->pre_;
@@ -118,9 +118,13 @@ namespace dragonfly
             struct event notify_event;
             int notify_send_fd;
             int notify_recv_fd;
+			///TODO:
+			/// not use this.
+			/// every loop have one queue,but not use
+
             ConnQueue connect_queue;
 
-            EventLoop *tcp_connect;
+            TcpServer *tcp_connect;
         };
 
     }

@@ -3,7 +3,7 @@
 CC = g++
 
 SRCS = test.cc \
-	  EventLoop.cc \
+	  TcpServer.cc \
 
 
 OBJS = $(SRCS:.cc=.o)
